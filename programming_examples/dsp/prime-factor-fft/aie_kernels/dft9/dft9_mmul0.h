@@ -1,40 +1,19 @@
+//===- dft9_mmul0.h -------------------------------------------------*- C++
+//-*-===//
 //
-// Copyright (C) 2023, Advanced Micro Devices, Inc. All rights reserved.
-// SPDX-License-Identifier: MIT
+// This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// Author: Mark Rollins
+// Copyright (C) 2022, Advanced Micro Devices, Inc.
+//
+//===----------------------------------------------------------------------===//
+#ifndef _DFFT9_MMUL0_H
+#define _DFFT9_MMUL0_H
 
-#pragma once
+extern "C" {
+  void dft9_0(int16_t *input);
+}
 
-#include <adf.h>
-#include <aie_api/aie.hpp>
-
-using namespace adf;
-
-class dft9_0 {
-public:
-  typedef cint16 TT_DATA;
-  typedef cint16 TT_TWID;
-  typedef cacc64 TT_ACC;
-  static constexpr unsigned NUM_FFT = 4*7*16;
-  static constexpr unsigned NSAMP_I = 9*NUM_FFT; // 9 samples per transform
-  static constexpr unsigned DNSHIFT = 15;
-  static constexpr unsigned COEFF_DEPTH = 4*16;
-private:
-  // DFT coefficients:
-  alignas(16) TT_TWID (&coeff)[COEFF_DEPTH];
-public:
-  // Constructor:
-  dft9_0( TT_TWID (&coeff_i)[COEFF_DEPTH] );
-
-  // Run:
-  void run(  input_buffer<TT_DATA,extents<NSAMP_I> >& __restrict sig_i,
-             output_cascade<TT_ACC>* __restrict acc_o );
-
-  static void registerKernelClass( void )
-  {
-    REGISTER_FUNCTION( dft9_0::run );
-    REGISTER_PARAMETER( coeff );
-  }
-};
+#endif
 
