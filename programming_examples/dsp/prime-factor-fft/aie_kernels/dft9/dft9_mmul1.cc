@@ -96,7 +96,9 @@ alignas(16) TT_TWID coeff[COEFF_DEPTH] = {
     {0,0} 
 };
 
-void dft9_1(TT_DATA *input)
+extern "C" {
+// void dft9_1(TT_DATA *input)
+void dft9_1(int16_t *input)
 {
 
     aie::set_rounding(aie::rounding_mode::symmetric_inf);
@@ -138,7 +140,7 @@ void dft9_1(TT_DATA *input)
     aie::vector<TT_DATA,32> data2;
 
     // Input buffer pointer:
-    TT_DATA* __restrict ptr = input;
+    TT_DATA* __restrict ptr = (cint16_t *)input;
 
     // Loop over complete set of DFT-9 required for PFA-1008 transform:
     // --> We will run 7*16 = 112 transforms in total for a complete PFA-1008 (one kernel invocation)
@@ -218,5 +220,6 @@ void dft9_1(TT_DATA *input)
     }  
 }
 
+} // extern "C"
 
 

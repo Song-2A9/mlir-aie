@@ -30,14 +30,15 @@ except ValueError:
 
 # Define tensor types
 line_size = vector_size // 4
-line_type = np.ndarray[(line_size,), np.dtype[np.uint8]]
+# line_type = np.ndarray[(line_size,), np.dtype[np.uint8]]
+line_type = np.ndarray[(line_size,), np.dtype[np.int16]]
 vector_type = np.ndarray[(vector_size,), np.dtype[np.uint8]]
 
 # Dataflow with ObjectFifos
 of_in = ObjectFifo(line_type, name="in")
-of_0to1 = ObjectFifo(line_type, name="0to1")
-of_1to2 = ObjectFifo(line_type, name="1to2")
-of_2to3 = ObjectFifo(line_type, name="2to3")
+of_0to1 = ObjectFifo(line_type, name="b0to1")
+of_1to2 = ObjectFifo(line_type, name="b1to2")
+of_2to3 = ObjectFifo(line_type, name="b2to3")
 of_out = ObjectFifo(line_type, name="out")
 
 # External, binary kernel definition
@@ -47,12 +48,67 @@ passthrough_fn = Kernel(
     [line_type, line_type, np.int32],
 )
 
+dft9_mmul0_fn = Kernel(
+    "dft9_0",
+    "dft9_mmul0.cc.o",
+    [line_type],
+)
+
+dft9_mmul1_fn = Kernel(
+    "dft9_1",
+    "dft9_mmul1.cc.o",
+    [line_type],
+)
+
+dft9_mmul2_fn = Kernel(
+    "dft9_2",
+    "dft9_mmul2.cc.o",
+    [line_type],
+)
+
+dft9_mmul3_fn = Kernel(
+    "dft9_3",
+    "dft9_mmul3.cc.o",
+    [line_type],
+)
 
 # Task for the core to perform
 def core_fn(of_in, of_out, passThroughLine):
     elemOut = of_out.acquire(1)
     elemIn = of_in.acquire(1)
     passThroughLine(elemIn, elemOut, line_size)
+    of_in.release(1)
+    of_out.release(1)
+
+def core_dft9_mmul0_fn(of_in, of_out, dft9_0): # of_out is placeholder
+    elemOut = of_out.acquire(1)
+    elemIn = of_in.acquire(1)
+    dft9_0(elemIn)
+    of_in.release(1)
+    of_out.release(1)
+
+def core_dft9_mmul1_fn(of_in, of_in2, of_out, dft9_1): # of_in and of_out are placeholders
+    elemOut = of_out.acquire(1)
+    elemIn = of_in.acquire(1)
+    elemIn2 = of_in2.acquire(1)
+    dft9_1(elemIn2)
+    of_in2.release(1)
+    of_in.release(1)
+    of_out.release(1)
+
+def core_dft9_mmul2_fn(of_in, of_in2, of_out, dft9_2):  # of_in and of_out are placeholders
+    elemOut = of_out.acquire(1)
+    elemIn = of_in.acquire(1)
+    elemIn2 = of_in2.acquire(1)
+    dft9_2(elemIn2)
+    of_in2.release(1)
+    of_in.release(1)
+    of_out.release(1)
+
+def core_dft9_mmul3_fn(of_in, of_out, dft9_3): # of_in is a placeholder
+    elemIn = of_in.acquire(1)
+    elemOut = of_out.acquire(1)
+    dft9_3(elemOut)
     of_in.release(1)
     of_out.release(1)
 
@@ -67,10 +123,14 @@ def core_fn2(of_in, of_in2, of_out, passThroughLine):
 
 
 # Create workers to perform the tasks
-dtf9_kk0 = Worker(core_fn, [of_in.cons(), of_0to1.prod(), passthrough_fn])
-dtf9_kk1 = Worker(core_fn2, [of_0to1.cons(), of_in.cons(), of_1to2.prod(), passthrough_fn])
-dtf9_kk2 = Worker(core_fn2, [of_1to2.cons(), of_in.cons(), of_2to3.prod(), passthrough_fn])
-dtf9_kk3 = Worker(core_fn, [of_2to3.cons(), of_out.prod(), passthrough_fn])
+# dtf9_kk0 = Worker(core_fn, [of_in.cons(), of_0to1.prod(), passthrough_fn])
+dtf9_kk0 = Worker(core_dft9_mmul0_fn, [of_in.cons(), of_0to1.prod(), dft9_mmul0_fn])
+# dtf9_kk1 = Worker(core_fn2, [of_0to1.cons(), of_in.cons(), of_1to2.prod(), passthrough_fn])
+dtf9_kk1 = Worker(core_dft9_mmul1_fn, [of_0to1.cons(), of_in.cons(), of_1to2.prod(), dft9_mmul1_fn])
+# dtf9_kk2 = Worker(core_fn2, [of_1to2.cons(), of_in.cons(), of_2to3.prod(), passthrough_fn])
+dtf9_kk2 = Worker(core_dft9_mmul2_fn, [of_1to2.cons(), of_in.cons(), of_2to3.prod(), dft9_mmul2_fn])
+# dtf9_kk3 = Worker(core_fn, [of_2to3.cons(), of_out.prod(), passthrough_fn])
+dtf9_kk3 = Worker(core_dft9_mmul3_fn, [of_2to3.cons(), of_out.prod(), dft9_mmul3_fn])
 my_workers = [dtf9_kk0, dtf9_kk1, dtf9_kk2, dtf9_kk3]
 
 # Runtime operations to move data to/from the AIE-array

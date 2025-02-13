@@ -28,7 +28,9 @@ static constexpr unsigned NUM_FFT = 4*7*16;
 static constexpr unsigned NSAMP_I = 9*NUM_FFT; // 9 samples per transform
 static constexpr unsigned DNSHIFT = 15;
 
-void dft9_3(TT_DATA *output)
+extern "C" {
+// void dft9_3(TT_DATA *output)
+void dft9_3(int16_t *output)
 {
 
     aie::set_rounding(aie::rounding_mode::symmetric_inf);
@@ -39,7 +41,7 @@ void dft9_3(TT_DATA *output)
     
     // Output buffer pointer:
     // auto itw = aie::begin_vector<8>(sig_o);
-    TT_DATA* __restrict itw = output;
+    TT_DATA* __restrict itw = (cint16_t *)output;
 
     aie::vector<TT_DATA,8> data0;
     aie::vector<TT_DATA,8> data1;
@@ -119,5 +121,6 @@ void dft9_3(TT_DATA *output)
     }  
 }
 
+} // extern "C"
 
 
